@@ -45,10 +45,19 @@ from luxai_s2.state import (
 from luxai_s2.team import FactionTypes, Team
 from luxai_s2.unit import Unit, UnitType
 from luxai_s2.utils.utils import get_top_two_power_units, is_day
+from dataclasses import dataclass,field
 
 # some utility types
 ActionsByType = Dict[str, List[Tuple[Unit, Action]]]
 
+@dataclass
+class UnitStepAchievements():
+    agent_id: str
+    ice_pickedup: int = 0
+    ore_pickedup: int = 0
+    collisions: int = 0
+    resource_wasted: int = 0
+    resource_delivered: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
 def env():
     """
@@ -72,6 +81,7 @@ class LuxAI_S2(ParallelEnv):
 
     def __init__(self, collect_stats: bool = False, **kwargs):
         self.collect_stats = collect_stats  # note: added here instead of in configs since it would break existing bots
+        self.unit_step_achievements:Dict[str,UnitStepAchievements] = {}
         default_config = EnvConfig(**kwargs)
         self.env_cfg = default_config
         self.possible_agents = ["player_" + str(r) for r in range(2)]
@@ -418,6 +428,7 @@ class LuxAI_S2(ParallelEnv):
                 transfer_action.resource, transfer_action.transfer_amount
             )
             amount_list.append(transfer_amount)
+            self.unit_step_achievements[unit.unit_id].resource_wasted += transfer_action.transfer_amount
 
         # add to target cargo
         for (unit, transfer_action), transfer_amount in zip(
@@ -435,6 +446,7 @@ class LuxAI_S2(ParallelEnv):
                 actually_transferred = factory.add_resource(
                     transfer_action.resource, transfer_amount
                 )
+                self.unit_step_achievements[unit.unit_id].resource_delivered[factory_id]+=actually_transferred
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["transfer"][
                         resource_to_name[transfer_action.resource]
@@ -505,12 +517,16 @@ class LuxAI_S2(ParallelEnv):
                     )
             elif self.state.board.ice[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(0, unit.unit_cfg.DIG_RESOURCE_GAIN)
+                self.unit_step_achievements[unit.unit_id].ice_pickedup += gained
+                self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ice"][
                         unit.unit_type.name
                     ] += gained
             elif self.state.board.ore[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(1, unit.unit_cfg.DIG_RESOURCE_GAIN)
+                self.unit_step_achievements[unit.unit_id].ore_pickedup += gained
+                self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ore"][
                         unit.unit_type.name
@@ -645,6 +661,7 @@ class LuxAI_S2(ParallelEnv):
                     most_power_unit.power -= most_power_unit_power_loss
                     surviving_unit = most_power_unit
                     for u in units:
+                        self.unit_step_achievements[u.unit_id].collisions+=1
                         if u.unit_id != surviving_unit.unit_id:
                             destroyed_units.add(u)
                     self.log_info(
@@ -781,6 +798,7 @@ class LuxAI_S2(ParallelEnv):
         failed_agents = {agent: False for agent in self.agents}
         # Turn 1 logic, handle
         early_game = False
+        self.unit_step_achievements = {}
         if self.env_steps == 0:
             early_game = True
         if self.env_cfg.BIDDING_SYSTEM and self.state.real_env_steps < 0:
@@ -811,6 +829,7 @@ class LuxAI_S2(ParallelEnv):
                                 format_factory_action(action)
                             )
                         elif "unit" in unit_id:
+                            self.unit_step_achievements[unit_id] = UnitStepAchievements(agent_id=agent)
                             unit = self.state.units[agent][unit_id]
                             # if unit does not have more than ACTION_QUEUE_POWER_COST power, we skip updating the action queue and print warning
                             update_power_req = self.state.env_cfg.ROBOTS[
