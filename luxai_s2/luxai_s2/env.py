@@ -644,6 +644,11 @@ class LuxAI_S2(ParallelEnv):
             if len(units) <= 1:
                 new_units_map_after_collision[pos_hash] += units
                 continue
+            else:
+                for u in units:
+                    # print("collision",u.unit_id,u.unit_id in self.unit_step_achievements)
+                    if u.unit_id in self.unit_step_achievements:
+                        self.unit_step_achievements[u.unit_id].collisions+=1
             if len(heavy_entered_pos[pos_hash]) > 1:
                 # all units collide, find the top 2 units by power
                 (most_power_unit, next_most_power_unit) = get_top_two_power_units(units, UnitType.HEAVY)
@@ -661,7 +666,6 @@ class LuxAI_S2(ParallelEnv):
                     most_power_unit.power -= most_power_unit_power_loss
                     surviving_unit = most_power_unit
                     for u in units:
-                        self.unit_step_achievements[u.unit_id].collisions+=1
                         if u.unit_id != surviving_unit.unit_id:
                             destroyed_units.add(u)
                     self.log_info(
@@ -1039,6 +1043,7 @@ class LuxAI_S2(ParallelEnv):
             unit_id=f"unit_{self.state.global_id}",
             env_cfg=self.env_cfg,
         )
+        # print(f"Unit {unit.unit_id} ({unit.unit_type}) added")
         unit.pos.pos = pos.copy()
         self.state.global_id += 1
         self.state.units[team.agent][unit.unit_id] = unit
