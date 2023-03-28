@@ -458,10 +458,10 @@ class LuxAI_S2(ParallelEnv):
                 actually_transferred = target_unit.add_resource(
                     transfer_action.resource, transfer_amount
                 )
-                if self.collect_stats:
-                    self.state.stats[unit.team.agent]["transfer"][
-                        resource_to_name[transfer_action.resource]
-                    ] += actually_transferred
+                # if self.collect_stats:
+                #     self.state.stats[unit.team.agent]["transfer"][
+                #         resource_to_name[transfer_action.resource]
+                #     ] += actually_transferred
             unit.repeat_action(transfer_action)
 
     def _handle_pickup_actions(self, actions_by_type: ActionsByType):
@@ -518,7 +518,7 @@ class LuxAI_S2(ParallelEnv):
             elif self.state.board.ice[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(0, unit.unit_cfg.DIG_RESOURCE_GAIN)
                 self.unit_step_achievements[unit.unit_id].ice_pickedup += gained
-                self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
+                # self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ice"][
                         unit.unit_type.name
@@ -526,7 +526,7 @@ class LuxAI_S2(ParallelEnv):
             elif self.state.board.ore[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(1, unit.unit_cfg.DIG_RESOURCE_GAIN)
                 self.unit_step_achievements[unit.unit_id].ore_pickedup += gained
-                self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
+                # self.unit_step_achievements[unit.unit_id].resource_wasted += unit.unit_cfg.DIG_RESOURCE_GAIN - gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ore"][
                         unit.unit_type.name
