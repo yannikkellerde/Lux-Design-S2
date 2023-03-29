@@ -794,10 +794,10 @@ class LuxAI_S2(ParallelEnv):
         dicts where each dict looks like {agent_1: item_1, agent_2: item_2}
         """
         # If a user passes in actions with no agents, then just return empty observations, etc.
-        if not actions:
-            raise ValueError("No actions given")
-            self.agents = []
-            return {}, {}, {}, {}
+        # if not actions:
+            # raise ValueError("No actions given")
+            # self.agents = []
+            # return {}, {}, {}, {}
         
         failed_agents = {agent: False for agent in self.agents}
         # Turn 1 logic, handle
