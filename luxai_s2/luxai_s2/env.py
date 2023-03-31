@@ -329,6 +329,7 @@ class LuxAI_S2(ParallelEnv):
         failed_agents = {agent: False for agent in self.agents}
         for k, a in actions.items():
             if a is None:
+                print(f"Player {k} tried None action")
                 failed_agents[k] = True
                 continue
             if k not in self.agents:
@@ -373,7 +374,7 @@ class LuxAI_S2(ParallelEnv):
                     self.state.teams[k].init_water -= a["water"]
                 else:
                     # pass, turn is skipped.
-                    pass
+                    raise ValueError("Failed to place factory")
             except Exception as e:
                 print(traceback.format_exc())
                 failed_agents[k] = True
@@ -993,6 +994,7 @@ class LuxAI_S2(ParallelEnv):
         self.state.board.rubble[self.state.board.factory_occupancy_map != -1] = 0
 
         # rewards for all agents are placed in the rewards dictionary to be returned
+        factory_loss = False
         rewards = {}
         for agent in self.agents:
             if agent in self.state.teams:
@@ -1000,6 +1002,7 @@ class LuxAI_S2(ParallelEnv):
                 factories_left = len(self.state.factories[agent])
                 if factories_left == 0 and self.state.real_env_steps >= 0:
                     failed_agents[agent] = True
+                    factory_loss = True
                     self.log_warning(f"{agent} lost all factories")
                 if failed_agents[agent]:
                     rewards[agent] = -1000
@@ -1013,6 +1016,8 @@ class LuxAI_S2(ParallelEnv):
                 failed_agents[agent] = True
                 rewards[agent] = -1000
 
+        if (failed_agents["player_0"] or failed_agents["player_1"]) and not factory_loss:
+            raise Exception("player lost differently from factory loss")
         self.env_steps += 1
         self.state.env_steps += 1
         env_done = self.state.real_env_steps >= self.state.env_cfg.max_episode_length
