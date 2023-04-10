@@ -92,6 +92,7 @@ class DestroyedStatsStateDict(TypedDict):
     LIGHT: int
     rubble: RobotStatsStateDict
     lichen: RobotStatsStateDict
+    SELFCOLLISION: int
 
 
 def create_destroyed_stats():
@@ -99,6 +100,7 @@ def create_destroyed_stats():
         FACTORY=0,
         HEAVY=0,
         LIGHT=0,
+        SELFCOLLISION=0,
         rubble=create_robot_stats(),
         lichen=create_robot_stats(),
     )
@@ -110,7 +112,8 @@ class StatsStateDict(TypedDict):
     action_queue_updates_success: int
     action_queue_updates_total: int
     destroyed: DestroyedStatsStateDict
-    transfer: TransferStatsStateDict
+    transfer_factory: TransferStatsStateDict
+    transfer_unit: TransferStatsStateDict
     pickup: PickUpStatsStateDict
 
 
@@ -126,5 +129,6 @@ def create_empty_stats() -> StatsStateDict:
     stats["destroyed"] = create_destroyed_stats()
     stats["generation"] = create_generation_stats()
     stats["pickup"] = create_transfer_pickup_stats()
-    stats["transfer"] = create_transfer_pickup_stats()
+    stats["transfer_factory"] = create_transfer_pickup_stats()
+    stats["transfer_unit"] = create_transfer_pickup_stats()
     return stats

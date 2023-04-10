@@ -56,6 +56,8 @@ class TeamStepAchievements():
     lights_destroyed:int = 0
     heavies_destroyed:int = 0
     factories_destroyed:int = 0
+    resources_wasted:int = 0
+    unit_transfers:List[Tuple[Unit,Unit,int,str]] = field(default_factory=list)
 
 # some utility types
 ActionsByType = Dict[str, List[Tuple[Unit, Action]]]
@@ -448,12 +450,12 @@ class LuxAI_S2(ParallelEnv):
                 actually_transferred = factory.add_resource(
                     transfer_action.resource, transfer_amount
                 )
-                if transfer_action.resource == "ice":
+                if resource_to_name[transfer_action.resource] == "ice":
                     self.tsa[unit.team.agent].ice_transfered+=actually_transferred
-                elif transfer_action.resource == "ore":
+                elif resource_to_name[transfer_action.resource] == "ore":
                     self.tsa[unit.team.agent].ore_transfered+=actually_transferred
                 if self.collect_stats:
-                    self.state.stats[unit.team.agent]["transfer"][
+                    self.state.stats[unit.team.agent]["transfer_factory"][
                         resource_to_name[transfer_action.resource]
                     ] += actually_transferred
             elif units_there is not None:
@@ -463,10 +465,13 @@ class LuxAI_S2(ParallelEnv):
                 actually_transferred = target_unit.add_resource(
                     transfer_action.resource, transfer_amount
                 )
+                self.tsa[unit.team.agent].unit_transfers.append((unit,target_unit,actually_transferred,resource_to_name[transfer_action.resource]))
                 if self.collect_stats:
-                    self.state.stats[unit.team.agent]["transfer"][
+                    self.state.stats[unit.team.agent]["transfer_unit"][
                         resource_to_name[transfer_action.resource]
                     ] += actually_transferred
+            else:
+                self.tsa[unit.team.agent].resources_wasted += transfer_amount
             unit.repeat_action(transfer_action)
 
     def _handle_pickup_actions(self, actions_by_type: ActionsByType):
@@ -650,6 +655,15 @@ class LuxAI_S2(ParallelEnv):
             if len(units) <= 1:
                 new_units_map_after_collision[pos_hash] += units
                 continue
+            else:
+                if self.collect_stats:
+                    aid = set()
+                    for unit in units:
+                        if unit.team_id in aid:
+                            self.state.stats[unit.team.agent]["destroyed"]["SELFCOLLISION"] += 1
+                            break
+                        aid.add(unit.team_id)
+
             if len(heavy_entered_pos[pos_hash]) > 1:
                 # all units collide, find the top 2 units by power
                 (most_power_unit, next_most_power_unit) = get_top_two_power_units(units, UnitType.HEAVY)
@@ -747,7 +761,7 @@ class LuxAI_S2(ParallelEnv):
             if u.unit_type == u.unit_type.HEAVY:
                 self.tsa[u.team.agent].heavies_destroyed += 1
             elif u.unit_type == u.unit_type.LIGHT:
-                self.tsa[u.team.agent].heavies_destroyed += 1
+                self.tsa[u.team.agent].lights_destroyed += 1
             else:
                 raise Exception("I do not understand enums")
 
@@ -940,7 +954,8 @@ class LuxAI_S2(ParallelEnv):
                             start_of_step_lichen_tiles < 0
                         ].sum()
                         lichen_gained = start_of_step_lichen_tiles.sum() - lichen_lost
-                        self.state.stats[agent]["generation"]["lichen"] += lichen_gained
+                        if lichen_gained>0:
+                            self.state.stats[agent]["generation"]["lichen"] += lichen_gained
 
             # resources refining
             for agent in self.agents:
