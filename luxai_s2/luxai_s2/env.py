@@ -51,8 +51,8 @@ from dataclasses import dataclass,field
 class TeamStepAchievements():
     ice_transfered:int = 0
     ore_transfered:int = 0
-    ice_mined:int = 0
-    ore_mined:int = 0
+    ice_mined:dict = field(default_factory=lambda :defaultdict(int))
+    ore_mined:dict = field(default_factory=lambda :defaultdict(int))
     lights_destroyed:int = 0
     heavies_destroyed:int = 0
     factories_destroyed:int = 0
@@ -530,14 +530,14 @@ class LuxAI_S2(ParallelEnv):
                         )
             elif self.state.board.ice[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(0, unit.unit_cfg.DIG_RESOURCE_GAIN)
-                self.tsa[unit.team.agent].ice_mined+=gained
+                self.tsa[unit.team.agent].ice_mined[unit.unit_id]+=gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ice"][
                         unit.unit_type.name
                     ] += gained
             elif self.state.board.ore[unit.pos.x, unit.pos.y] > 0:
                 gained = unit.add_resource(1, unit.unit_cfg.DIG_RESOURCE_GAIN)
-                self.tsa[unit.team.agent].ore_mined+=gained
+                self.tsa[unit.team.agent].ore_mined[unit.unit_id]+=gained
                 if self.collect_stats:
                     self.state.stats[unit.team.agent]["generation"]["ore"][
                         unit.unit_type.name
@@ -816,8 +816,8 @@ class LuxAI_S2(ParallelEnv):
         dicts where each dict looks like {agent_1: item_1, agent_2: item_2}
         """
         # If a user passes in actions with no agents, then just return empty observations, etc.
-        # if not actions:
-            # raise ValueError("No actions given")
+        if not actions:
+            raise ValueError("No actions given")
             # self.agents = []
             # return {}, {}, {}, {}
         
